@@ -1,5 +1,5 @@
 API ?= 35
-PROJECT ?= S908WVLS8FYG7
+PROJECT ?= S908EXXSDGZB6
 PROJECT_SUFFIX := $(if $(USE_BUILDROOT),-qemu,)
 OUTDIR ?= build/$(PROJECT)$(PROJECT_SUFFIX)/bin
 
@@ -55,17 +55,36 @@ BUILDROOT_TOOLCHAIN := $(BUILDROOT_DIR)/bin
 BUILDROOT_CC := $(BUILDROOT_TOOLCHAIN)/aarch64-linux-gcc
 BUILDROOT_SYSROOT := $(BUILDROOT_DIR)/aarch64-buildroot-linux-gnu/sysroot
 
-DEFAULT_NDK_ROOT := $(or $(wildcard $(HOME)/Android/Sdk/ndk/27.2.12479018),$(HOME)/android-ndk-cache/android-ndk-r29)
+UNAME_S := $(shell uname -s 2>/dev/null || echo Unknown)
+
+DEFAULT_NDK_ROOT := $(or \
+  $(wildcard $(HOME)/NDK), \
+  $(lastword $(sort $(wildcard $(HOME)/Library/Android/sdk/ndk/*))), \
+  $(lastword $(sort $(wildcard $(HOME)/Android/Sdk/ndk/*))), \
+  $(wildcard $(HOME)/Android/Sdk/ndk/27.2.12479018), \
+  $(lastword $(sort $(wildcard $(HOME)/android-ndk-cache/android-ndk-r*))), \
+  $(wildcard $(HOME)/android-ndk-cache/android-ndk-r29), \
+  $(firstword $(wildcard /opt/android-ndk*)), \
+  $(firstword $(wildcard /opt/homebrew/share/android-ndk*)), \
+  $(firstword $(wildcard /usr/local/share/android-ndk*)) \
+)
 NDK_ROOT ?= $(or $(ANDROID_NDK_HOME),$(ANDROID_NDK_ROOT),$(DEFAULT_NDK_ROOT))
 # Host tag / exe suffix: NDK prebuilts ship .cmd wrapper scripts on Windows,
 # extensionless ELF-shebang scripts on Linux/macOS.
-NDK_HOST_TAG ?= $(if $(filter Windows_NT,$(OS)),windows-x86_64,linux-x86_64)
+ifeq ($(OS),Windows_NT)
+  NDK_HOST_TAG ?= windows-x86_64
+else ifeq ($(UNAME_S),Darwin)
+  NDK_HOST_TAG ?= darwin-x86_64
+else
+  NDK_HOST_TAG ?= linux-x86_64
+endif
 NDK_EXE := $(if $(filter windows-x86_64,$(NDK_HOST_TAG)),.cmd,)
-NDK_TOOLCHAIN ?= $(if $(NDK_ROOT),$(NDK_ROOT)/toolchains/llvm/prebuilt/$(NDK_HOST_TAG))
+NDK_TOOLCHAIN ?= $(if $(NDK_ROOT),$(or $(wildcard $(NDK_ROOT)/toolchains/llvm/prebuilt/$(NDK_HOST_TAG)),$(firstword $(wildcard $(NDK_ROOT)/toolchains/llvm/prebuilt/*))))
 NDK_CC := $(NDK_TOOLCHAIN)/bin/aarch64-linux-android$(API)-clang$(NDK_EXE)
 HOST_CLANG ?= clang
 SYSROOT ?= $(if $(NDK_TOOLCHAIN),$(NDK_TOOLCHAIN)/sysroot)
-RESOURCE_DIR ?= $(if $(NDK_TOOLCHAIN),$(NDK_TOOLCHAIN)/lib/clang/21)
+RESOURCE_DIR ?= $(if $(NDK_TOOLCHAIN),$(or $(lastword $(sort $(wildcard $(NDK_TOOLCHAIN)/lib/clang/* $(NDK_TOOLCHAIN)/lib64/clang/*))),$(NDK_TOOLCHAIN)/lib/clang/21))
+SHA256SUM ?= $(if $(shell command -v sha256sum >/dev/null 2>&1 && echo yes),sha256sum,shasum -a 256)
 
 HOST_TARGET_FLAGS := \
   --target=aarch64-linux-android$(API) \
@@ -208,23 +227,23 @@ $(EMBEDDIR):
 
 $(EMBED_EXP): $(EXP_SRCS) src/kernelsnitch/utils.h | $(EMBEDDIR)
 	$(EXP_CC) $(EXP_CFLAGS) $(EXP_SRCS) $(EXP_LDFLAGS) -o $@
-	sha256sum $@
+	$(SHA256SUM) $@
 
 $(EXP_OUT): $(EMBED_EXP) | $(OUTDIR)
 	cp $< $@
-	sha256sum $@
+	$(SHA256SUM) $@
 
 $(ROOT_HELPER): $(call pick_src,su_daemon.c) $(TARGET_HEADER) | $(OUTDIR)
 	$(TARGET_CC) $(TARGET_FLAGS) $(PIE_CFLAGS) $(TARGET_CFLAGS) \
 	  $(call pick_src,su_daemon.c) $(TARGET_PIE_LDFLAGS) -o $@
-	sha256sum $@
+	$(SHA256SUM) $@
 
 $(PRELOAD): $(PRELOAD_SRCS) $(EMBED_EXP) $(TARGET_HEADER) src/offset.h src/common.h src/kernelsnitch/*.h | $(OUTDIR)
 	$(TARGET_CC) $(TARGET_FLAGS) $(SO_CFLAGS) $(WARN_CFLAGS) $(TARGET_CFLAGS) \
 	  $(PRELOAD_SRCS) $(TARGET_COMMON_LDFLAGS) \
 	  -shared -o $@ -pthread -ldl
 	ln -sf $(notdir $@) $(OUTDIR)/cve.so
-	sha256sum $@
+	$(SHA256SUM) $@
 
 info:
 	@echo "PROJECT=$(PROJECT)"
@@ -239,7 +258,7 @@ info:
 	@echo "CORE_SRCS=$(CORE_SRCS)"
 
 list-projects:
-	@find src/targets -mindepth 2 -maxdepth 2 -name target.h -printf '%h\n' | sed 's#src/targets/##' | sort
+	@find src/targets -mindepth 2 -maxdepth 2 -name target.h | sed 's#src/targets/##; s#/target\.h##' | sort
 
 clean:
 	rm -rf build

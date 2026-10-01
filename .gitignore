@@ -18,3 +18,5 @@ target_generator/config.txt
 
 # Test targets / QEMU test environments
 tests-targets/
+venv
+.DS_Store
